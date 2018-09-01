@@ -14,8 +14,9 @@ export const CANCELLED = Symbol('CANCELLED');
 export function memoizeAsync(fn, maxEntries = 1) {
 	let cache = {};
 	let invalidatedPromise = {};
-
+	let before = null;
 	const wrapped = function(...args) {
+		let runFn = fn;
 		const key = JSON.stringify(args);
 		let result = cache[key];
 		if (typeof result !== 'undefined') {
@@ -26,7 +27,18 @@ export function memoizeAsync(fn, maxEntries = 1) {
 				return result;
 			}
 		}
-		result = fn.apply(null, args);
+
+		//If there is a 'before' function, create a new runFn that runs 'before' first
+		//and *then* runs the wrapped function to re-populate the cache.
+		if (before !== null) {
+			runFn = async () => {
+				const beforeResult = await before();
+				before = null;
+				const result = await fn.apply(null, args);
+				return result;
+			};
+		}
+		result = runFn.apply(null, args);
 
 		if (result.then && typeof result.then === 'function') {
 			let cancelled = false;
@@ -80,6 +92,16 @@ export function memoizeAsync(fn, maxEntries = 1) {
 		}
 		invalidatedPromise = {};
 		cache = {};
+	};
+
+	/**
+	 * Invalidate the cache, but make sure to run the supplied
+	 * function before the wrapped function is run to repopulate the cache.
+	 * @param {*} fn
+	 */
+	wrapped.runAndInvalidate = function(fn) {
+		before = fn;
+		wrapped.invalidate();
 	};
 
 	return wrapped;

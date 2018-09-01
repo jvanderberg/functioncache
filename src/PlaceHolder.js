@@ -9,6 +9,7 @@ export class PlaceHolder extends PureComponent {
 	refresh(waiting, invalidated = false) {
 		this.setState({ waiting, invalidated });
 	}
+
 	componentDidCatch(error) {
 		if (error.then && typeof error.then === 'function') {
 			error
@@ -16,7 +17,7 @@ export class PlaceHolder extends PureComponent {
 					this.refresh(false);
 					//Hook the invalidated promise attached to the original promise
 					if (error.invalidated && error.invalidated.then && typeof error.invalidated.then === 'function') {
-						error.invalidated.then(invalidatedNew => {
+						error.invalidated.then(() => {
 							this.refresh(false, true);
 						});
 					}
@@ -29,12 +30,14 @@ export class PlaceHolder extends PureComponent {
 	}
 	render() {
 		const Alternate = this.props.alternate;
+		const Content = this.props.content;
 		if (!this.state.waiting) {
-			const children = React.Children.map(this.props.children, (child, index) => React.cloneElement(child));
-			return children;
+			//const children = React.Children.map(this.props.children, (child, index) => React.cloneElement(child));
+			return <Content />;
 		} else if (this.state.waiting && this.props.alternate) {
 			return <Alternate />;
 		} else {
+			debugger;
 			return <div />;
 		}
 	}

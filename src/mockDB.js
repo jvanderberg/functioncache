@@ -8,10 +8,10 @@ export function getUniqueId() {
 	return id++;
 }
 
-export function mockDB(initialState = {}, delay = 50) {
+export function mockDB(initialState = {}, firstId = 0, mockDelay = 50) {
 	state = initialState;
-	delay = delay;
-	id = 0;
+	delay = mockDelay;
+	id = firstId;
 	return state;
 }
 

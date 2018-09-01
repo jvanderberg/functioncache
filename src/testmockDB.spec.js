@@ -29,7 +29,7 @@ test('Updating items', async () => {
 	});
 });
 
-test('Adding items with id', async () => {
+test('Adding items with ids', async () => {
 	let db = mockDB();
 	await put({ id: 'one', order: 1, description: 'Buy milk' });
 	await put({ id: 'two', order: 2, description: 'Call Nan' });
