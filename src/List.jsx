@@ -1,26 +1,28 @@
 import React, { Fragment } from 'react';
 
 import { Item } from './Item';
-import { getListCached, addItem } from './service';
+import { getListCached, addItem, deleteItem } from './service';
 import { FormState } from './FormState';
+import List from '@material-ui/core/List';
+import { ListItem, ListItemText, IconButton, ListItemSecondaryAction } from '@material-ui/core';
+import DeleteIcon from '@material-ui/icons/Delete';
 
-const AddItem = ({ description, descriptionChanged }) => (
-	<div>
-		<input type="text" value={description} onChange={descriptionChanged} />
-		<button onClick={() => addItem({ description })}>Done</button>
-	</div>
-);
-
-export const List = ({ adding, toggleAdding }) => {
-	const result = getListCached('dummy');
+export const TodoList = ({ subscribe, search }) => {
+	const result = subscribe(getListCached)(search);
 	return (
 		<Fragment>
-			{result.map((item, index) => (
-				<Item index={index} item={item} />
-			))}
-			<button onClick={() => getListCached.invalidate()}>Refresh</button>
-			<button onClick={() => toggleAdding()}>Add</button>
-			<FormState name="description">{AddItem}</FormState>
+			<List>
+				{result.map((item, index) => (
+					<ListItem index={index}>
+						<ListItemText primary={item.description} />
+						<ListItemSecondaryAction>
+							<IconButton aria-label="Comments">
+								<DeleteIcon onClick={() => deleteItem(item.id)} />
+							</IconButton>
+						</ListItemSecondaryAction>
+					</ListItem>
+				))}
+			</List>
 		</Fragment>
 	);
 };

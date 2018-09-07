@@ -7,9 +7,70 @@
 		{
 			"type": "chrome",
 			"request": "launch",
+			"name": "Launch Chrome",
+			"url": "http://localhost:3000",
+			"webRoot": "${workspaceFolder}"
+		},
+		{
+			"type": "chrome",
+			"request": "launch",
 			"name": "functioncache",
 			"url": "http://localhost:3000",
 			"webRoot": "${workspaceFolder}"
 		}
+	    {
+			"name": "Debug Jest", // name to show in Debug config picker
+			"type": "node",
+			"request": "launch",
+			"address": "localhost",
+			// everything above here is standard node debug
+			// some people specify "port": 5858, but that didn't work; Code seems to pick the right one now
+			"sourceMaps": true, // if you are using Babel or TS, make this true
+			// you can add another arg to pattern-match limit the tests, just as when normally running jest
+			"runtimeArgs": [
+			  "${workspaceRoot}/node_modules/jest/bin/jest.js",
+			  "--runInBand", // https://facebook.github.io/jest/docs/en/cli.html#runinband - don't parallelize
+			  "--no-cache" // https://facebook.github.io/jest/docs/en/cli.html#cache - just avoid caching issues
+			],
+			"env": {
+			  "NODE_ENV": "test" // make sure it matches your target; useful for babel config
+			}
+		  },
+		  {
+			"name": "Test with debugger",
+			"type": "node",
+			"request": "launch",
+			"port": 5858,
+			"runtimeArgs": [
+			  "--debug-brk",
+			  "--nolazy"
+			],
+			"program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+			"args": [
+			  "--runInBand",
+			  "--transform={\"^.+\\\\.(js|jsx)$\": \"babel-jest\",\"^.+\\\\.css$\": \"jest-css\",\"^(?!.*\\\\.(js|jsx|css|json)$)\": \"jest-file\"}"
+			],
+			"cwd": "${workspaceRoot}"
+		  },
+		  {
+			"name": "Debug CRA Tests",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceRoot}/node_modules/react-scripts/bin/react-scripts.js",
+			"runtimeArgs": [
+				"--nolazy"  
+			],
+			"args": [
+				"test",
+			  "--runInBand",
+			  "--no-cache",
+			  "--env=jsdom"
+			],
+			"cwd": "${workspaceRoot}",
+			"protocol": "legacy",
+		//	"console": "integratedTerminal",
+		//	"internalConsoleOptions": "neverOpen"
+		  }
+		
 	]
 }

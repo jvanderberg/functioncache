@@ -1,4 +1,4 @@
-import { memoizeAsync, INVALIDATED, EXPIRED, CANCELLED } from './memoize';
+import { memoizeAsync, INVALIDATED, EXPIRED, CANCELLED, VALID } from './memoize';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -7,43 +7,26 @@ async function getLater(ms, value) {
 	return value;
 }
 
-let singleValue;
-
-async function getSingleValue(ms) {
-	await wait(ms);
-	return singleValue;
-}
-
-async function putSingleValue(ms, value) {
-	await wait(ms);
-	singleValue = value;
-}
-
-function catchErrors(done, callback) {
-	return function() {
-		try {
-			callback.apply(this, arguments);
-		} catch (e) {
-			done.fail(e);
-		}
-	};
-}
-test('memoize async', async () => {});
-
-let cached = memoizeAsync(getLater);
 test('memoize async', async () => {
+	const cached = memoizeAsync(getLater);
+	const responses = [];
+	cached.subscribe(event => {
+		responses.push(event);
+	});
 	//	catchErrors(done, async () => {
-	expect(() => cached(100, 2)).toThrow();
-	// //Calling before resolution show re-throw the same promise
-	expect(() => cached(100, 2)).toThrow();
+	let result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	//Calling before resolution show re-throw the same promise
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
 
 	await wait(200);
 	//Result has resolved, call returns sync
-	let result = cached(100, 2);
+	result = cached(100, 2);
 	expect(result).toBe(2);
 
 	//New parms, not cached, should throw
-	expect(() => cached(100, 3)).toThrow();
+	result = cached(100, 3);
 	await wait(200);
 
 	//Result has resolved, call returns cached sync
@@ -51,152 +34,146 @@ test('memoize async', async () => {
 	expect(result).toBe(3);
 
 	//Old cache should be invalidated
-	expect(() => cached(100, 2)).toThrow();
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
 
 	await wait(200);
 
 	//Explicitly invalidate
 	cached.invalidate();
-	expect(() => cached(100, 2)).toThrow();
-});
-
-test('memoize invalidated handler', async () => {
-	cached = memoizeAsync(getLater);
-	let result;
-	try {
-		cached(100, 2);
-	} catch (promise) {
-		try {
-			cached(100, 2);
-		} catch (promise2) {
-			//Before resolved, should always return the same promise
-			expect(promise2).toBe(promise);
-			setTimeout(() => cached.invalidate(), 100);
-			const res = await promise.invalidated;
-			const res2 = await promise2.invalidated;
-			expect(res).toBe(INVALIDATED);
-			expect(res2).toBe(INVALIDATED);
-		}
-	}
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
 	await wait(200);
+	expect(responses).toEqual([VALID, VALID, VALID, INVALIDATED, VALID]);
 });
 
-test('memoize runAndInvalidate', async () => {
-	let singleValue = memoizeAsync(getSingleValue);
-	await putSingleValue(100, 42);
+test('test subscription invalidate/cancel before fetch complete', async () => {
+	const cached = memoizeAsync(getLater);
+	expect(cached.subscribers().size).toBe(0);
 	let result;
-	try {
-		result = singleValue(50);
-	} catch (e) {
-		await wait(100);
-		result = singleValue(50);
-		expect(result).toBe(42);
-		singleValue.runAndInvalidate(async () => {
-			await putSingleValue(100, 43);
-		});
-		try {
-			result = singleValue(50);
-		} catch (e) {
-			await wait(200);
-			result = singleValue(50);
-			expect(result).toBe(43);
-		}
-	}
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+
+	const responses = [];
+	cached.subscribe(event => {
+		responses.push(event);
+	});
+	setTimeout(() => cached.invalidate(), 50);
+
+	let first = await wait(200);
+	expect(responses).toEqual([INVALIDATED, CANCELLED]);
 });
 
-let cachedInv = memoizeAsync(getLater);
-test('memoize invalidated handler rejecting', async () => {
-	try {
-		cachedInv(100, 2);
-	} catch (promise) {
-		promise.then(async () => {
-			//Result has resolved, call returns sync
-			let result = cachedInv(100, 2);
-			expect(result).toBe(2);
+test('test subscription invalidate after fetch complete', async () => {
+	const cached = memoizeAsync(getLater);
+	expect(cached.subscribers().size).toBe(0);
+	let result;
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
 
-			//New parms, not cached, should throw
-			expect(() => cachedInv(100, 3)).toThrow();
-			await wait(200);
+	const responses = [];
+	cached.subscribe(event => {
+		responses.push(event);
+	});
+	setTimeout(() => cached.invalidate(), 150);
 
-			//Result has resolved, call returns cached sync
-			result = cachedInv(100, 3);
-			expect(result).toBe(3);
-		});
-		try {
-			await promise.invalidated;
-		} catch (e) {
-			expect(e).toBe(EXPIRED);
-		}
-	}
+	let first = await wait(200);
+	expect(responses).toEqual([VALID, INVALIDATED]);
 });
 
-test('memoize promise cancellation', async () => {
-	let cachedInv = memoizeAsync(getLater);
-	//This will run after the call in the try block has executed
-	setTimeout(() => cachedInv.invalidate(), 10);
-	try {
-		cachedInv(100, 2);
-	} catch (promise) {
-		await expect(promise).rejects.toBe(CANCELLED);
-	}
+test('test subscription invalidation', async () => {
+	const cached = memoizeAsync(getLater);
+	expect(cached.subscribers().size).toBe(0);
+	const responses = [];
+	cached.subscribe(event => {
+		responses.push(event);
+	});
+	expect(cached.subscribers().size).toBe(1);
+	let result;
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	cached.invalidate();
+	expect(responses).toEqual([INVALIDATED]);
 });
 
-// const cached2 = memoizeAsync(getLater);
-// test('memoize async invalidate before done', async () => {
-// 	expect(() => cached2(100, 2)).toThrow();
-// 	cached2.invalidate();
-// 	await wait(200);
-// 	//Even after resolve, the result is not cached
-// 	expect(() => cached2(100, 2)).toThrow();
-// });
+test('memoize returns same promise', async () => {
+	const cached = memoizeAsync(getLater);
+	let result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	let result2 = cached(100, 2);
+	expect(result).toBe(result2);
+});
 
-// test('memoize async invalidate before done, testing cancellation of pending result', async () => {
-// 	cached = memoizeAsync(getLater);
-// 	expect(() => cached(100, 2)).toThrow();
-// 	await wait(80);
-// 	cached.invalidate();
-// 	//Call it again
-// 	expect(() => cached(100, 2)).toThrow();
-// 	await wait(80);
-// 	//We've waiting long enough for the first result to come back, but it should be rejected, so a second call should still throw
-// 	expect(() => cached(100, 2)).toThrow();
-// 	cached.invalidate();
-// 	await wait(200);
+test('memoize async invalidate before done', async () => {
+	const cached = memoizeAsync(getLater);
 
-// 	//Even after resolve, the result is not cached
-// 	expect(() => cached(100, 2)).toThrow();
-// });
+	let result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	cached.invalidate();
+	await wait(200);
+	//Even after resolve, the result is not cached
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+});
 
-// const cached3 = memoizeAsync(getLater, 2);
-// test('memoize async with two entries', async () => {
-// 	expect(() => cached3(100, 2)).toThrow();
-// 	await wait(200);
-// 	//Result has resolved, call returns sync
-// 	let result = cached3(100, 2);
-// 	expect(result).toBe(2);
+test('memoize async invalidate before done, testing cancellation of pending result', async () => {
+	const cached = memoizeAsync(getLater);
 
-// 	//New parms, not cached3, should throw
-// 	expect(() => cached3(100, 3)).toThrow();
-// 	await wait(200);
+	let result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
 
-// 	//Result has resolved, call returns cached3 sync
-// 	result = cached3(100, 3);
-// 	expect(result).toBe(3);
+	await wait(80);
+	cached.invalidate();
+	//Call it again
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	await wait(80);
+	//We've waiting long enough for the first result to come back, but it should be rejected, so a second call should still throw
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	cached.invalidate();
+	await wait(200);
 
-// 	//Old cache should still be there
-// 	result = cached3(100, 2);
-// 	expect(result).toBe(2);
+	//Even after resolve, the result is not cached
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+});
 
-// 	expect(() => cached3(100, 4)).toThrow();
-// 	await wait(200);
-// 	//Result has resolved, call returns cached3 sync
-// 	result = cached3(100, 3);
-// 	expect(result).toBe(3);
+test('memoize async with two entries', async () => {
+	const cached = memoizeAsync(getLater, 2);
+	let result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+	await wait(200);
+	//Result has resolved, call returns sync
+	result = cached(100, 2);
+	expect(result).toBe(2);
 
-// 	//First result should be evicted
-// 	expect(() => cached3(100, 2)).toThrow();
+	//New parms, not cached, should throw
+	result = cached(100, 3);
+	expect(typeof result.then).toBe('function');
+	await wait(200);
 
-// 	//Explicitly invalidate
-// 	cached3.invalidate();
-// 	expect(() => cached3(100, 4)).toThrow();
-// });
+	//Result has resolved, call returns cached3 sync
+	result = cached(100, 3);
+	expect(result).toBe(3);
+
+	//Old cache should still be there
+	result = cached(100, 2);
+	expect(result).toBe(2);
+
+	result = cached(100, 4);
+	expect(typeof result.then).toBe('function');
+	await wait(200);
+	//Result has resolved, call returns cached sync
+	result = cached(100, 3);
+	expect(result).toBe(3);
+
+	//First result should be evicted
+	result = cached(100, 2);
+	expect(typeof result.then).toBe('function');
+
+	//Explicitly invalidate
+	cached.invalidate();
+	result = cached(100, 4);
+	expect(typeof result.then).toBe('function');
+});

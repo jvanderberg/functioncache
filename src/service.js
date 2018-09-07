@@ -7,7 +7,7 @@ mockDB(
 		1: { order: 0, description: 'Call Bob', done: true, id: 1 }
 	},
 	2,
-	500
+	250
 );
 
 async function getList() {
@@ -16,18 +16,26 @@ async function getList() {
 	return items;
 }
 
-export const getListCached = memoizeAsync(getList, 1);
-
-export function addItem({ description }) {
-	getListCached.runAndInvalidate(async () => {
-		const item = await put({ description, order: 0 });
-		return item;
+async function searchList(search) {
+	const docs = await get();
+	const items = Object.keys(docs).map(key => docs[key]);
+	const found = items.filter(i => {
+		const item = i.description || '';
+		return item.toUpperCase().includes((search || '').toUpperCase());
 	});
+	debugger;
+	return found;
+}
+export const getListCached = memoizeAsync(searchList, 30);
+
+export async function addItem({ description }) {
+	getListCached.invalidate();
+	const item = await put({ description, order: 0 });
+	return item;
 }
 
-export function deleteItem(id) {
-	getListCached.runAndInvalidate(async () => {
-		const item = await remove(id);
-		return true;
-	});
+export async function deleteItem(id) {
+	getListCached.invalidate();
+	const item = await remove(id);
+	return true;
 }

@@ -15,8 +15,8 @@ export class FormState extends PureComponent {
 		this.setState({ [`${this.props.name}Changed`]: e => this.onChange(e) });
 	}
 
-	onChange(e) {
-		this.setState({ [this.props.name]: e.target.value });
+	onChange(value) {
+		this.setState({ [this.props.name]: value });
 	}
 
 	render() {

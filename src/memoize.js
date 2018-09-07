@@ -1,6 +1,14 @@
 export const INVALIDATED = Symbol('INVALIDATE');
 export const EXPIRED = Symbol('EXPIRED');
 export const CANCELLED = Symbol('CANCELLED');
+export const PENDING = Symbol('PENDING');
+export const VALID = Symbol('VALID');
+
+function notify(subscribers, event) {
+	for (const fn of subscribers.entries()) {
+		fn[0](event);
+	}
+}
 /**
  * Memoize a (potentially) async function.  If the function results are
  * already cached, return those results, if not, throw the promise returned
@@ -13,31 +21,15 @@ export const CANCELLED = Symbol('CANCELLED');
  */
 export function memoizeAsync(fn, maxEntries = 1) {
 	let cache = {};
-	let invalidatedPromise = {};
-	let before = null;
+	let subscribers = new Set();
 	const wrapped = function(...args) {
 		let runFn = fn;
 		const key = JSON.stringify(args);
 		let result = cache[key];
 		if (typeof result !== 'undefined') {
-			if (result.then && typeof result.then === 'function') {
-				//If the cached item is a Promise, re-throw it.
-				throw result;
-			} else {
-				return result;
-			}
+			return result;
 		}
 
-		//If there is a 'before' function, create a new runFn that runs 'before' first
-		//and *then* runs the wrapped function to re-populate the cache.
-		if (before !== null) {
-			runFn = async () => {
-				const beforeResult = await before();
-				before = null;
-				const result = await fn.apply(null, args);
-				return result;
-			};
-		}
 		result = runFn.apply(null, args);
 
 		if (result.then && typeof result.then === 'function') {
@@ -48,15 +40,6 @@ export function memoizeAsync(fn, maxEntries = 1) {
 						const entries = Object.keys(cache);
 						if (entries.length === maxEntries + 1) {
 							delete cache[entries[0]];
-							const rejectInvalidationKey = invalidatedPromise[entries[0]].reject;
-
-							if (rejectInvalidationKey) {
-								//The cache entry has not been explicitly invalidated, but if a view refreshes
-								//it will cause a refetch, and re-subscription to the invalidation promise.  This rejection
-								//will clear out any existing subscriptions to the invalidation promise for this key.
-								rejectInvalidationKey(EXPIRED);
-								delete invalidatedPromise[entries[0]];
-							}
 						}
 						//Replace the promise in the cache with the resolved value
 						cache[key] = value;
@@ -71,11 +54,9 @@ export function memoizeAsync(fn, maxEntries = 1) {
 			promise.cancel = () => {
 				cancelled = true;
 			};
-			promise.invalidated = new Promise((resolve, reject) => {
-				invalidatedPromise[key] = { resolve, reject };
-			});
+
 			cache[key] = promise;
-			throw promise;
+			return promise;
 		}
 		return result;
 	};
@@ -84,25 +65,34 @@ export function memoizeAsync(fn, maxEntries = 1) {
 		for (const key of Object.keys(cache)) {
 			const promise = cache[key];
 			if (promise.cancel && typeof promise.cancel === 'function') {
-				promise.cancel(INVALIDATED);
+				promise.cancel();
 			}
 		}
-		for (const key of Object.keys(invalidatedPromise)) {
-			invalidatedPromise[key].resolve(INVALIDATED);
-		}
-		invalidatedPromise = {};
+		notify(subscribers, INVALIDATED);
 		cache = {};
 	};
 
-	/**
-	 * Invalidate the cache, but make sure to run the supplied
-	 * function before the wrapped function is run to repopulate the cache.
-	 * @param {*} fn
-	 */
-	wrapped.runAndInvalidate = function(fn) {
-		before = fn;
-		wrapped.invalidate();
+	wrapped.validate = function() {
+		notify(subscribers, VALID);
+	};
+	// /**
+	//  * Invalidate the cache, but make sure to run the supplied
+	//  * function before the wrapped function is run to repopulate the cache.
+	//  * @param {*} fn
+	//  */
+	// wrapped.runAndInvalidate = function(fn) {
+	// 	before = fn;
+	// 	wrapped.invalidate();
+	// };
+	wrapped.subscribe = function(fn) {
+		subscribers.add(fn);
+	};
+	wrapped.unsubscribe = function(fn) {
+		if (subscribers.has(fn)) {
+			subscribers.delete(fn);
+		}
 	};
 
+	wrapped.subscribers = () => subscribers;
 	return wrapped;
 }
