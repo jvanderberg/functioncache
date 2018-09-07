@@ -15,6 +15,7 @@ async function getList() {
 	const items = Object.keys(docs).map(key => docs[key]);
 	return items;
 }
+export const getListCached = memoizeAsync(getList, 30);
 
 async function searchList(search) {
 	const docs = await get();
@@ -26,16 +27,19 @@ async function searchList(search) {
 	debugger;
 	return found;
 }
-export const getListCached = memoizeAsync(searchList, 30);
+
+export const searchListCached = memoizeAsync(searchList, 30);
 
 export async function addItem({ description }) {
 	getListCached.invalidate();
+	searchListCached.invalidate();
 	const item = await put({ description, order: 0 });
 	return item;
 }
 
 export async function deleteItem(id) {
 	getListCached.invalidate();
-	const item = await remove(id);
+	searchListCached.invalidate();
+	await remove(id);
 	return true;
 }

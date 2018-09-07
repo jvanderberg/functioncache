@@ -4,8 +4,8 @@ import { PlaceHolder } from './PlaceHolder';
 import { TodoList } from './List';
 import { FormState } from './FormState';
 import TextField from '@material-ui/core/TextField';
-import { addItem, getListCached } from './service';
-import { Card, CardContent, CardActionArea, CardActions, Button, CircularProgress } from '@material-ui/core';
+import { addItem, searchListCached } from './service';
+import { Card, CardContent, CardActions, Button, CircularProgress } from '@material-ui/core';
 const Waiting = () => (
 	<div>
 		<CircularProgress size={100} />
@@ -55,7 +55,7 @@ const App = () => (
 				<FormState name="search">{Search}</FormState>
 			</CardContent>
 			<CardActions>
-				<Button onClick={() => getListCached.invalidate()}>Refresh</Button>
+				<Button onClick={() => searchListCached.invalidate()}>Refresh</Button>
 			</CardActions>
 		</Card>
 		<Card style={{ flex: 1 }}>
@@ -63,7 +63,7 @@ const App = () => (
 				<FormState name="search">{Search}</FormState>
 			</CardContent>
 			<CardActions>
-				<Button onClick={() => getListCached.invalidate()}>Refresh</Button>
+				<Button onClick={() => searchListCached.invalidate()}>Refresh</Button>
 			</CardActions>
 		</Card>
 		<Card style={{ flex: 1 }}>
@@ -71,7 +71,7 @@ const App = () => (
 				<FormState name="search">{Search}</FormState>
 			</CardContent>
 			<CardActions>
-				<Button onClick={() => getListCached.invalidate()}>Refresh</Button>
+				<Button onClick={() => searchListCached.invalidate()}>Refresh</Button>
 			</CardActions>
 		</Card>
 		<Card style={{ flex: 1 }}>
@@ -79,7 +79,7 @@ const App = () => (
 				<FormState name="search">{Search}</FormState>
 			</CardContent>
 			<CardActions>
-				<Button onClick={() => getListCached.invalidate()}>Refresh</Button>
+				<Button onClick={() => searchListCached.invalidate()}>Refresh</Button>
 			</CardActions>
 		</Card>
 	</div>

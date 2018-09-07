@@ -1,14 +1,12 @@
 import React, { Fragment } from 'react';
 
-import { Item } from './Item';
-import { getListCached, addItem, deleteItem } from './service';
-import { FormState } from './FormState';
+import { searchListCached, deleteItem } from './service';
 import List from '@material-ui/core/List';
 import { ListItem, ListItemText, IconButton, ListItemSecondaryAction } from '@material-ui/core';
 import DeleteIcon from '@material-ui/icons/Delete';
 
 export const TodoList = ({ subscribe, search }) => {
-	const result = subscribe(getListCached)(search);
+	const result = subscribe(searchListCached)(search);
 	return (
 		<Fragment>
 			<List>

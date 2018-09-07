@@ -1,5 +1,4 @@
-import React, { PureComponent, Fragment } from 'react';
-import { CANCELLED } from './memoize';
+import { PureComponent } from 'react';
 
 export class FormState extends PureComponent {
 	constructor(props) {

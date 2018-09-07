@@ -1,5 +1,5 @@
-import React, { PureComponent, Fragment } from 'react';
-import { CANCELLED, PENDING, INVALIDATED, VALID } from './memoize';
+import React, { PureComponent } from 'react';
+import { PENDING, INVALIDATED } from './memoize';
 
 export class PlaceHolder extends PureComponent {
 	constructor(props) {
