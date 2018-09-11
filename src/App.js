@@ -4,7 +4,7 @@ import { PlaceHolder } from './PlaceHolder';
 import { FormState } from './FormState';
 import TextField from '@material-ui/core/TextField';
 import { searchListCached, getTodoListComponent } from './service';
-import { Card, CardContent, CardActions, Button, CircularProgress } from '@material-ui/core';
+import { Card, CardContent, CardActions, Button } from '@material-ui/core';
 import { AddItem } from './AddItem';
 import { Waiting } from './Waiting';
 
