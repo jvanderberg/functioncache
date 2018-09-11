@@ -1,5 +1,6 @@
 import { get, mockDB, put, remove } from './mockDB';
-import { memoizeAsync } from './memoize';
+import { memoize } from './memoize';
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 mockDB(
 	{
@@ -15,7 +16,7 @@ async function getList() {
 	const items = Object.keys(docs).map(key => docs[key]);
 	return items;
 }
-export const getListCached = memoizeAsync(getList, 30);
+export const getListCached = memoize(getList, 30);
 
 async function searchList(search) {
 	const docs = await get();
@@ -24,11 +25,10 @@ async function searchList(search) {
 		const item = i.description || '';
 		return item.toUpperCase().includes((search || '').toUpperCase());
 	});
-	debugger;
 	return found;
 }
 
-export const searchListCached = memoizeAsync(searchList, 30);
+export const searchListCached = memoize(searchList, 30);
 
 export async function addItem({ description }) {
 	getListCached.invalidate();
@@ -43,3 +43,10 @@ export async function deleteItem(id) {
 	await remove(id);
 	return true;
 }
+
+async function getTodoList() {
+	const List = await import('./List');
+	return List.TodoList;
+}
+
+export const getTodoListComponent = memoize(getTodoList, 1);

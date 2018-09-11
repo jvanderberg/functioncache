@@ -19,7 +19,7 @@ function notify(subscribers, event) {
  * @returns Either the cached results or throws the promise returned by the
  * function call
  */
-export function memoizeAsync(fn, maxEntries = 1) {
+export function memoize(fn, maxEntries = 1) {
 	let cache = {};
 	let subscribers = new Set();
 	const wrapped = function(...args) {
@@ -62,31 +62,24 @@ export function memoizeAsync(fn, maxEntries = 1) {
 	};
 
 	wrapped.invalidate = function() {
-		for (const key of Object.keys(cache)) {
-			const promise = cache[key];
-			if (promise.cancel && typeof promise.cancel === 'function') {
-				promise.cancel();
+		try {
+			for (const key of Object.keys(cache)) {
+				const promise = cache[key];
+				if (promise.cancel && typeof promise.cancel === 'function') {
+					promise.cancel();
+				}
 			}
+			notify(subscribers, INVALIDATED);
+			cache = {};
+		} catch (e) {
+			console.log(e);
 		}
-		notify(subscribers, INVALIDATED);
-		cache = {};
 	};
 
-	wrapped.validate = function() {
-		notify(subscribers, VALID);
-	};
-	// /**
-	//  * Invalidate the cache, but make sure to run the supplied
-	//  * function before the wrapped function is run to repopulate the cache.
-	//  * @param {*} fn
-	//  */
-	// wrapped.runAndInvalidate = function(fn) {
-	// 	before = fn;
-	// 	wrapped.invalidate();
-	// };
 	wrapped.subscribe = function(fn) {
 		subscribers.add(fn);
 	};
+
 	wrapped.unsubscribe = function(fn) {
 		if (subscribers.has(fn)) {
 			subscribers.delete(fn);

@@ -6,17 +6,21 @@ export class PlaceHolder extends PureComponent {
 		super(props);
 		this.state = { waiting: false, invalidated: false };
 		this.functions = new Set();
+		this.promises = new Set();
 		this.eventHandler = event => this.handleEvent(event);
 	}
+
 	refresh(waiting, invalidated = false) {
 		this.setState({ waiting, invalidated });
 	}
+
 	componentWillUnmount() {
 		for (const fn of this.functions) {
 			fn.unsubscribe(this.eventHandler);
 		}
 		this.functions.clear();
 	}
+
 	handleEvent(event) {
 		if (event === INVALIDATED) {
 			this.refresh(false, true);
@@ -35,26 +39,21 @@ export class PlaceHolder extends PureComponent {
 			this.functions.add(fn);
 		}
 		const that = this;
-		return function(...args) {
+		return (...args) => {
 			const result = fn.apply(null, args);
 			if (result.then && typeof result.then === 'function') {
-				setTimeout(
-					function() {
-						this.refresh(true, true);
-					}.bind(that),
-					0
-				);
-				result
-					.then(
-						function() {
+				if (!this.promises.has(result)) {
+					this.refresh(true, true);
+					result
+						.then(() => {
+							this.promises.delete(result);
 							this.refresh(false, false);
-						}.bind(that)
-					)
-					.catch(
-						function() {
+						})
+						.catch(() => {
+							this.promises.delete(result);
 							this.refresh(true, true);
-						}.bind(that)
-					);
+						});
+				}
 				return defaultValue;
 			}
 			return result;
@@ -63,11 +62,7 @@ export class PlaceHolder extends PureComponent {
 	render() {
 		const Alternate = this.props.alternate;
 		if (!this.state.waiting || !this.props.alternate) {
-			const children = React.Children.map(this.props.children, (child, index) =>
-				React.cloneElement(child, { subscribe: fn => this.subscribe(fn) })
-			);
-			//return <Content {...this.props} />;
-			return children;
+			return this.props.children({ subscribe: (fn, defaultValue) => this.subscribe(fn, defaultValue) });
 		} else if (this.state.waiting && this.props.alternate) {
 			return <Alternate />;
 		} else {

@@ -8,6 +8,7 @@
     "pouchdb": "^7.0.0",
     "prettier": "^1.14.0",
     "react": "^16.4.2",
+    "react-beautiful-dnd": "^9.0.2",
     "react-dom": "^16.4.2",
     "react-scripts": "1.1.4"
   },
