@@ -49,4 +49,4 @@ async function getTodoList() {
 	return List.TodoList;
 }
 
-export const getTodoListComponent = memoize(getTodoList, 1);
+export const getTodoListComponent = memoize(getTodoList, 1, true);

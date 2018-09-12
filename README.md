@@ -66,8 +66,3 @@ export const getTodoListComponent = memoize(getTodoList, 1);
 The dynamic import statement 'import()' is async. In the context of a webpack build this will result in the code for the 'List' component being put into a separate bundle.
 
 Here we memoize that async logic, and you can look in App.js to see how a component can use this to dynamically load children.
-
-## Things to try
-
--   Play with the delay in service.js where the mockDB is instantiated.
--   See if you can recode the application to use a single PlaceHolder for both aysnc wrappers.

@@ -16,10 +16,12 @@ function notify(subscribers, event) {
  * @export
  * @param {*} fn The function to be memoized
  * @param {number} [maxEntries=1] The number of cached entries to keep
+ * @param {boolean} immutable Whether or not the cache is immutable, if true, cannot be invalidated or evicted
+ * Good for a 'one shot' cache for a single item.
  * @returns Either the cached results or throws the promise returned by the
  * function call
  */
-export function memoize(fn, maxEntries = 1) {
+export function memoize(fn, maxEntries = 1, immutable = false) {
 	let cache = {};
 	let subscribers = new Set();
 	const wrapped = function(...args) {
@@ -38,7 +40,7 @@ export function memoize(fn, maxEntries = 1) {
 				result.then(function(value) {
 					if (!cancelled) {
 						const entries = Object.keys(cache);
-						if (entries.length === maxEntries + 1) {
+						if (!immutable && entries.length === maxEntries + 1) {
 							delete cache[entries[0]];
 						}
 						//Replace the promise in the cache with the resolved value
@@ -62,7 +64,7 @@ export function memoize(fn, maxEntries = 1) {
 	};
 
 	wrapped.invalidate = function() {
-		try {
+		if (!immutable) {
 			for (const key of Object.keys(cache)) {
 				const promise = cache[key];
 				if (promise.cancel && typeof promise.cancel === 'function') {
@@ -71,13 +73,15 @@ export function memoize(fn, maxEntries = 1) {
 			}
 			notify(subscribers, INVALIDATED);
 			cache = {};
-		} catch (e) {
-			console.log(e);
 		}
 	};
 
 	wrapped.subscribe = function(fn) {
-		subscribers.add(fn);
+		if (!immutable) {
+			subscribers.add(fn);
+			return true;
+		}
+		return false;
 	};
 
 	wrapped.unsubscribe = function(fn) {

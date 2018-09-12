@@ -34,11 +34,10 @@ export class PlaceHolder extends PureComponent {
 	 * @param {Function} fn
 	 */
 	subscribe(fn, defaultValue = []) {
-		fn.subscribe(this.eventHandler);
-		if (!this.functions.has(fn)) {
+		const subscribed = fn.subscribe(this.eventHandler);
+		if (subscribed && !this.functions.has(fn)) {
 			this.functions.add(fn);
 		}
-		const that = this;
 		return (...args) => {
 			const result = fn.apply(null, args);
 			if (result.then && typeof result.then === 'function') {

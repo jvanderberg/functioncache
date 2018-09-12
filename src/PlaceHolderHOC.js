@@ -1,7 +1,7 @@
-import React, { PureComponent, Fragment } from 'react';
-import { CANCELLED } from './memoize';
+import React from 'react';
+import { PlaceHolder } from './PlaceHolder';
 
-export const PlaceHolder = ({ alternate }) => Component => {
+export const PlaceHolderHOC = ({ alternate }) => Component => {
 	class Wrapper extends PlaceHolder {
 		constructor(props) {
 			super(props);
